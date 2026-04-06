@@ -1,58 +1,83 @@
-import cv2
+import os
+import sys
+import time
 import pickle
+import cv2
 import numpy as np
 
-# Load mode
-with open("models/face_model.pkl", "rb") as f:
-    model = pickle.load(f)
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+if ROOT_DIR not in sys.path:
+    sys.path.append(ROOT_DIR)
 
-face_cascade = cv2.CascadeClassifier(
-    cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
-)
+try:
+    import config
+except ImportError:
+    from .. import config
 
-def preprocess(face):
-    face = cv2.resize(face, (64, 64))
-    face = cv2.cvtColor(face, cv2.COLOR_BGR2GRAY)
-    face = face / 255.0
-    return face.flatten().reshape(1, -1)
+try:
+    from src.preprocessing import preprocess_image
+except ImportError:
+    from preprocessing import preprocess_image
 
-cap = cv2.VideoCapture(0)
 
-threshold = 0.6 
+def load_model(model_path=config.MODEL_PATH):
+    if not os.path.exists(model_path):
+        raise FileNotFoundError(f"Model file not found at {model_path}")
 
-print("Press 'q' to quit")
+    with open(model_path, 'rb') as model_file:
+        model = pickle.load(model_file)
 
-while True:
-    ret, frame = cap.read()
-    if not ret:
-        break
+    return model
 
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    faces = face_cascade.detectMultiScale(gray, 1.3, 5)
 
-    for (x, y, w, h) in faces:
-        face = frame[y:y+h, x:x+w]
-        processed = preprocess(face)
+def capture_face_image(timeout_seconds=15):
+    cap = cv2.VideoCapture(0)
+    if not cap.isOpened():
+        return None, "Could not access the webcam."
 
-        distances, _ = model.kneighbors(processed)
-        distance = distances[0][0]
+    start_time = time.time()
+    while time.time() - start_time < timeout_seconds:
+        ret, frame = cap.read()
+        if not ret:
+            continue
 
-        if distance > threshold:
-            label = "Access Denied"
-            color = (0, 0, 255)
-        else:
-            label = model.predict(processed)[0]
-            color = (0, 255, 0)
+        processed_face = preprocess_image(image_array=frame)
+        if processed_face is not None:
+            cap.release()
+            return processed_face, None
 
-        cv2.putText(frame, label, (x, y-10),
-                    cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
+    cap.release()
+    return None, "No face detected. Please hold still and look at the camera."
 
-        cv2.rectangle(frame, (x, y), (x+w, y+h), color, 2)
 
-    cv2.imshow("Face Login", frame)
+def predict_face(preprocessed_face, model, threshold=config.DISTANCE_THRESHOLD):
+    face_vector = preprocessed_face.flatten().reshape(1, -1)
 
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
+    if not hasattr(model, 'kneighbors'):
+        label = model.predict(face_vector)[0]
+        return label, None, f"Access Granted: {label}"
 
-cap.release()
-cv2.destroyAllWindows()
+    distances, _ = model.kneighbors(face_vector)
+    distance = float(distances[0][0])
+
+    if distance > threshold:
+        return None, distance, "Access Denied"
+
+    label = model.predict(face_vector)[0]
+    return label, distance, f"Access Granted: {label}"
+
+
+def login_with_face(model_path=config.MODEL_PATH, threshold=config.DISTANCE_THRESHOLD):
+    model = load_model(model_path)
+    face, error = capture_face_image()
+    if face is None:
+        return None, None, error
+
+    return predict_face(face, model, threshold)
+
+
+if __name__ == "__main__":
+    label, distance, message = login_with_face()
+    print(message)
+    if distance is not None:
+        print(f"Distance: {distance:.2f}")

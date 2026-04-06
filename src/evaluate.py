@@ -1,56 +1,55 @@
 import os
-import cv2
-import numpy as np
+import sys
 import pickle
-from sklearn.metrics import accuracy_score, confusion_matrix
+import numpy as np
+from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
 from sklearn.model_selection import train_test_split
 
-DATASET_PATH = "data/raw"
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+if ROOT_DIR not in sys.path:
+    sys.path.append(ROOT_DIR)
 
-def preprocess(img):
-    img = cv2.resize(img, (64, 64))
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    img = img / 255.0
-    return img.flatten()
+try:
+    from src.feature_engineering import load_data
+except ImportError:
+    from feature_engineering import load_data
 
-X = []
-y = []
+try:
+    import config
+except ImportError:
+    from .. import config
 
-# Load images
-for user in os.listdir(DATASET_PATH):
-    user_path = os.path.join(DATASET_PATH, user)
 
-    for img_name in os.listdir(user_path):
-        img_path = os.path.join(user_path, img_name)
+def evaluate_model(model_path=config.MODEL_PATH):
+    X, y = load_data()
+    if len(X) == 0:
+        print("No data found for evaluation. Please capture face images first.")
+        return
 
-        img = cv2.imread(img_path)
-        if img is None:
-            continue
+    if not os.path.exists(model_path):
+        print(f"Model file not found at {model_path}. Train the model first.")
+        return
 
-        processed = preprocess(img)
-        X.append(processed)
-        y.append(user)
+    X_train, X_test, y_train, y_test = train_test_split(
+        X,
+        y,
+        test_size=0.3,
+        random_state=42,
+        stratify=y if len(np.unique(y)) > 1 else None,
+    )
 
-X = np.array(X)
-y = np.array(y)
+    with open(model_path, 'rb') as model_file:
+        model = pickle.load(model_file)
 
-# Train-test split
-X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=0.5, random_state=42
-)
+    y_pred = model.predict(X_test)
 
-# Load model
-with open("models/face_model.pkl", "rb") as f:
-    model = pickle.load(f)
+    accuracy = accuracy_score(y_test, y_pred)
+    print(f"Accuracy: {accuracy * 100:.2f}%")
+    print("\nConfusion Matrix:")
+    print(confusion_matrix(y_test, y_pred))
+    print("\nClassification Report:")
+    print(classification_report(y_test, y_pred, zero_division=0))
 
-# Predict
-y_pred = model.predict(X_test)
 
-# Accuracy
-accuracy = accuracy_score(y_test, y_pred)
-print(f"Accuracy: {accuracy * 100:.2f}%")
-
-# Confusion matrix
-cm = confusion_matrix(y_test, y_pred)
-print("Confusion Matrix:")
-print(cm)
+if __name__ == "__main__":
+    evaluate_model()

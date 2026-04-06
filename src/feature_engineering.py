@@ -1,74 +1,74 @@
 import os
+import sys
 import cv2
 import numpy as np
 
-def load_data(data_dir="data/raw"):
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+if ROOT_DIR not in sys.path:
+    sys.path.append(ROOT_DIR)
+
+try:
+    import config
+except ImportError:
+    from .. import config
+
+try:
+    from src.preprocessing import preprocess_image
+except ImportError:
+    from preprocessing import preprocess_image
+
+
+def load_data(data_dir=None):
     """
-    Loads preprocessed images from the given directory, flattens them into 1D arrays,
-    and creates the X (features) and y (labels) datasets.
-    
-    Assumes the directory structure is:
-    data_dir/
-        user1/
-            img1.jpg
-            img2.jpg
-        user2/
-            img1.jpg
-            ...
+    Loads face images from the given directory, preprocesses them, flattens them,
+    and creates the X and y datasets.
     """
-    X = []
-    y = []
-    
-    # Check if the directory exists
+    if data_dir is None:
+        data_dir = config.RAW_DATA_DIR
+
     if not os.path.exists(data_dir):
-        # Fallback to dataset if data/raw doesn't exist
-        if os.path.exists("dataset"):
-            data_dir = "dataset"
-        elif os.path.exists("data/processed"):
-            data_dir = "data/processed"
+        if os.path.exists(config.DATASET_DIR):
+            data_dir = config.DATASET_DIR
+        elif os.path.exists(config.PROCESSED_DATA_DIR):
+            data_dir = config.PROCESSED_DATA_DIR
         else:
             print(f"Directory {data_dir} does not exist. Please check your data path.")
-            return np.array(X), np.array(y)
+            return np.array([]), np.array([])
+
+    X = []
+    y = []
 
     print(f"Loading images from {data_dir}...")
-    
-    # Iterate through each user folder
+
     for user_name in os.listdir(data_dir):
         user_path = os.path.join(data_dir, user_name)
-        
-        # Only process directories
         if not os.path.isdir(user_path):
             continue
-            
+
         print(f"Processing images for user: {user_name}")
-        
-        # Read each image for the user
+
         for img_name in os.listdir(user_path):
             img_path = os.path.join(user_path, img_name)
-            
-            # Read image in grayscale
-            img = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE)
-            
-            if img is None:
-                print(f"Warning: Could not read image {img_path}")
+            if not os.path.isfile(img_path):
                 continue
-                
-            # Flatten the image into a 1D array
-            # If image is 64x64, flatten makes it 4096-dimensional
-            flattened_img = img.flatten()
-            
+
+            processed_face = preprocess_image(image_path=img_path)
+            if processed_face is None:
+                print(f"Warning: No face detected in {img_path}. Skipping.")
+                continue
+
+            flattened_img = processed_face.flatten()
             X.append(flattened_img)
             y.append(user_name)
-            
-    # Convert lists to numpy arrays
+
     X = np.array(X)
     y = np.array(y)
-    
+
     print(f"Successfully loaded {len(X)} images corresponding to {len(np.unique(y)) if len(y) > 0 else 0} users.")
     return X, y
 
+
 if __name__ == "__main__":
-    # Test the function if run directly
     X, y = load_data()
     if len(X) > 0:
         print(f"X shape: {X.shape}")
