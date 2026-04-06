@@ -68,7 +68,7 @@ faceauth-ai/
 
 1. **Clone the repository:**
    ```bash
-   git clone <repo_url>
+   git clone https://github.com/gamebek/faceauth-ai.git
    cd faceauth-ai
    ```
 
@@ -166,4 +166,4 @@ python tests/test_pipeline.py
 
 ---
 
-**Built with ❤️ using OpenCV, scikit-learn, and Streamlit**
+**Built using OpenCV, scikit-learn, and Streamlit**
