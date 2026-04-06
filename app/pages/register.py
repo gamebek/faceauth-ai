@@ -43,7 +43,7 @@ if run_preview and not stop_preview:
             if ret:
                 # Convert BGR to RGB for Streamlit
                 frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                preview_placeholder.image(frame_rgb, channels="RGB", use_column_width=True)
+                preview_placeholder.image(frame_rgb, channels="RGB")
                 time.sleep(0.1)  # Small delay to prevent excessive CPU usage
             else:
                 st.error("Failed to capture from camera")
