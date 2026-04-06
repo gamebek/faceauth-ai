@@ -57,6 +57,45 @@ def preprocess_image(image_path=None, image_array=None):
     
     return face_normalized
 
+
+def extract_lbp_histogram(face_image, num_points=8, radius=1, bins=256):
+    """Extract a normalized Local Binary Pattern histogram from a grayscale face image."""
+    if face_image is None:
+        return None
+
+    face_uint8 = (face_image * 255).astype('uint8')
+    lbp = np.zeros(face_uint8.shape, dtype=np.uint8)
+
+    for y in range(radius, face_uint8.shape[0] - radius):
+        for x in range(radius, face_uint8.shape[1] - radius):
+            center = face_uint8[y, x]
+            binary_string = 0
+            for point in range(num_points):
+                theta = 2 * np.pi * point / num_points
+                dx = int(round(x + radius * np.cos(theta)))
+                dy = int(round(y - radius * np.sin(theta)))
+                neighbor = face_uint8[dy, dx]
+                if neighbor >= center:
+                    binary_string |= 1 << point
+            lbp[y, x] = binary_string
+
+    hist, _ = np.histogram(lbp.ravel(), bins=bins, range=(0, bins))
+    hist = hist.astype(np.float32)
+    if hist.sum() > 0:
+        hist /= hist.sum()
+
+    return hist
+
+
+def get_face_features(image_path=None, image_array=None):
+    """Preprocess a face image and return a feature vector for recognition."""
+    face = preprocess_image(image_path=image_path, image_array=image_array)
+    if face is None:
+        return None
+
+    return extract_lbp_histogram(face)
+
+
 def test_preprocessing():
     """Simple test function to verify preprocessing works on a captured image."""
     print("Testing preprocessing logic...")

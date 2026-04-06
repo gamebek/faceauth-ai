@@ -13,15 +13,14 @@ except ImportError:
     from .. import config
 
 try:
-    from src.preprocessing import preprocess_image
+    from src.preprocessing import get_face_features
 except ImportError:
-    from preprocessing import preprocess_image
+    from preprocessing import get_face_features
 
 
 def load_data(data_dir=None):
     """
-    Loads face images from the given directory, preprocesses them, flattens them,
-    and creates the X and y datasets.
+    Loads face images from the given directory, extracts face features, and creates the X and y datasets.
     """
     if data_dir is None:
         data_dir = config.RAW_DATA_DIR
@@ -52,13 +51,12 @@ def load_data(data_dir=None):
             if not os.path.isfile(img_path):
                 continue
 
-            processed_face = preprocess_image(image_path=img_path)
+            processed_face = get_face_features(image_path=img_path)
             if processed_face is None:
                 print(f"Warning: No face detected in {img_path}. Skipping.")
                 continue
 
-            flattened_img = processed_face.flatten()
-            X.append(flattened_img)
+            X.append(processed_face)
             y.append(user_name)
 
     X = np.array(X)

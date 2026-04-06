@@ -26,6 +26,10 @@ def evaluate_model(model_path=config.MODEL_PATH):
         print("No data found for evaluation. Please capture face images first.")
         return
 
+    unique_classes = np.unique(y)
+    if len(unique_classes) == 1:
+        print("Warning: Only one registered user found. Evaluation will not reflect impostor rejection.")
+
     if not os.path.exists(model_path):
         print(f"Model file not found at {model_path}. Train the model first.")
         return

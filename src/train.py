@@ -42,6 +42,10 @@ def train_model(data_dir=None, model_save_path=None):
         print("Please ensure you have captured facial images first.")
         return
 
+    unique_classes = np.unique(y)
+    if len(unique_classes) == 1:
+        print("Warning: Only one registered user found. The model may not reject unknown faces reliably.")
+
     print("Performing train/test split...")
 
     unique_classes = np.unique(y)
@@ -67,7 +71,11 @@ def train_model(data_dir=None, model_save_path=None):
 
     print("Initializing and training KNN model...")
     n_neighbors = min(3, len(X_train))
-    knn_model = KNeighborsClassifier(n_neighbors=n_neighbors)
+    if n_neighbors < 1:
+        print("Error: No training samples available after preprocessing.")
+        return
+
+    knn_model = KNeighborsClassifier(n_neighbors=n_neighbors, weights='distance')
     knn_model.fit(X_train, y_train)
 
     print("Evaluating model performance on test set...")

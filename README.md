@@ -87,7 +87,17 @@ faceauth-ai/
    - **Register Page**: Enter username, capture face images with live preview, train model
    - **Login Page**: Authenticate using face recognition with real-time feedback
 
-## 🔧 Configuration
+## �️ Screenshots
+
+Add screenshots of the app here once available:
+
+- ![Home Page](screenshots/home.png)
+- ![Register Page](screenshots/register.png)
+- ![Login Page](screenshots/login.png)
+
+> Create a `screenshots/` folder and place the images there, or replace these placeholders with your own screenshot paths.
+
+## �🔧 Configuration
 
 Key settings in `config.py`:
 - `IMAGE_SIZE`: Face image dimensions (default: 64x64)

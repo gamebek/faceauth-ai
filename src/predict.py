@@ -15,9 +15,9 @@ except ImportError:
     from .. import config
 
 try:
-    from src.preprocessing import preprocess_image
+    from src.preprocessing import get_face_features
 except ImportError:
-    from preprocessing import preprocess_image
+    from preprocessing import get_face_features
 
 
 def load_model(model_path=config.MODEL_PATH):
@@ -41,7 +41,7 @@ def capture_face_image(timeout_seconds=15):
         if not ret:
             continue
 
-        processed_face = preprocess_image(image_array=frame)
+        processed_face = get_face_features(image_array=frame)
         if processed_face is not None:
             cap.release()
             return processed_face, None
@@ -51,7 +51,7 @@ def capture_face_image(timeout_seconds=15):
 
 
 def predict_face(preprocessed_face, model, threshold=config.DISTANCE_THRESHOLD):
-    face_vector = preprocessed_face.flatten().reshape(1, -1)
+    face_vector = preprocessed_face.reshape(1, -1)
 
     if not hasattr(model, 'kneighbors'):
         label = model.predict(face_vector)[0]
